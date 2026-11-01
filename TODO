@@ -1,0 +1,10 @@
+TODO: use 'ldarg' instead 'ldloc'
+
+; ldloc for argument loading is not allowed (in future)
+function fib(i32 a) -> i32 {
+L0:
+  ldloc     a ; error, use 'ldarg' instead
+  ldc.i32   42
+  ret
+}
+

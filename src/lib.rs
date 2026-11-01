@@ -57,13 +57,13 @@ impl ToStaticStr for Type {
     fn to_static_str(self) -> &'static str {
         match self {
             Type::Void => "void",
-            Type::Bool => "bool",
-            Type::Int8 => "int8",
-            Type::Int16 => "int16",
-            Type::Int32 => "int32",
-            Type::Int64 => "int64",
-            Type::Float32 => "float32",
-            Type::Float64 => "float64",
+            Type::Bool => "i1",
+            Type::Int8 => "i8",
+            Type::Int16 => "i16",
+            Type::Int32 => "i32",
+            Type::Int64 => "i64",
+            Type::Float32 => "f32",
+            Type::Float64 => "f64",
         }
     }
 }

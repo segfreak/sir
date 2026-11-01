@@ -1,5 +1,0 @@
-
-function fib(int32 a) -> int32 {
-L0:
-  loadlocal a
-}
