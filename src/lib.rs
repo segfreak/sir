@@ -706,19 +706,19 @@ mod tests {
             Instruction::LoadConstant(Constant::Int(20), Type::Int32),
             Instruction::LoadConstant(Constant::Int(30), Type::Int32),
             Instruction::Rot,
-            Instruction::StoreLocal(2),
-            Instruction::StoreLocal(1),
-            Instruction::StoreLocal(0),
+            Instruction::StoreLocal(2), // 10
+            Instruction::StoreLocal(1), // 30
+            Instruction::StoreLocal(0), // 20
             Instruction::LoadLocal(0),
-            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
             Instruction::ICmp(IntPredicate::Eq),
             Instruction::Assert,
             Instruction::LoadLocal(1),
-            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
             Instruction::ICmp(IntPredicate::Eq),
             Instruction::Assert,
             Instruction::LoadLocal(2),
-            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
             Instruction::ICmp(IntPredicate::Eq),
             Instruction::Assert,
         ]);

@@ -395,9 +395,9 @@ impl<'a> FunctionVerifier<'a> {
                 let b = self.pop(stack, label, index)?;
                 let a = self.pop(stack, label, index)?;
 
+                stack.push(b);
                 stack.push(c);
                 stack.push(a);
-                stack.push(b);
 
                 Ok(ControlFlow::Continue)
             }

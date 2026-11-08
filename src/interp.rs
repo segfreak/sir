@@ -292,9 +292,9 @@ impl VM {
                     let b = self.pop()?;
                     let a = self.pop()?;
 
+                    self.push(b);
                     self.push(c);
                     self.push(a);
-                    self.push(b);
                 }
                 // Копирует элемент с глубины n на вершину стека (0 — это вершина)
                 // [..., a, b, c] pick(1) => [..., a, b, c, b]
