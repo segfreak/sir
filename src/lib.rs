@@ -14,6 +14,8 @@ pub type FunctionRef = u32;
 
 pub type ArgRef = usize;
 
+pub type InstructionRef = usize;
+
 #[derive(Debug, Clone, Copy)]
 
 pub enum Constant {
@@ -214,20 +216,61 @@ impl std::fmt::Display for FloatPredicate {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
-    LocalDecl(LocalRef, Type),
+    // Копирует второй элемент стека на вершину
+    // [a, b] => [a, b, a]
+    Over,
+
+    // Удаляет второй элемент стека, оставляя вершину на месте.
+    // [a, b] => [b]
+    Nip,
+
+    // Дублирует вершину стека под второй элемент
+    // [a, b] => [b, a, b]
+    Tuck,
+
+    // Удаляет верхний элемент стека
+    // [a, b] => [a]
+    Pop,
+
+    // Дублирует элемент на вершине стека
+    // [a] => [a, b]
+    Dup,
+
+    // Меняет местами два элемента на вершине стека
+    // [a, b] => [b, a]
+    Swp,
+
+    // Циклический сдвиг трех верхних элементов стека
+    // [a, b, c] => [c, a, b]
+    Rot,
+
+    // Копирует элемент с глубины n на вершину стека (0 — это вершина)
+    // [..., a, b, c] pick(1) => [..., a, b, c, b]
+    Pick(usize),
+
+    // Переносит элемент с глубины n на вершину стека, сдвигая промежуточные
+    // [..., a, b, c] roll(1) => [..., a, c, b] (если 1 — это b)
+    Roll(usize),
+
+    // Загружает константу на вершину
     LoadConstant(Constant, Type),
+
+    // Загружает значение аргумента функции на вершину
     LoadArg(ArgRef),
+
+    // Загружает значение слота на вершину
     LoadLocal(LocalRef),
+
+    // Читает значение вершины в слот
     StoreLocal(LocalRef),
+
     Assert,
     Goto(LabelRef),
     GotoIfTrue(LabelRef),
     GotoIfFalse(LabelRef),
     Ret,
     Call(FunctionRef),
-    Pop,
-    Dup,
-    Swp,
+
     IAdd,
     ISub,
     IMul,
@@ -262,9 +305,6 @@ pub enum Instruction {
 impl std::fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Instruction::LocalDecl(local, ty) => {
-                write!(f, ".loc %{local}, {}", ty)
-            }
             Instruction::LoadConstant(constant, ty) => {
                 write!(f, "ldc.{} {}", ty, constant)
             }
@@ -280,6 +320,12 @@ impl std::fmt::Display for Instruction {
             Instruction::Pop => write!(f, "pop"),
             Instruction::Dup => write!(f, "dup"),
             Instruction::Swp => write!(f, "swp"),
+            Instruction::Over => write!(f, "over"),
+            Instruction::Nip => write!(f, "nip"),
+            Instruction::Tuck => write!(f, "tuck"),
+            Instruction::Rot => write!(f, "rot"),
+            Instruction::Pick(n) => write!(f, "pick {n}"),
+            Instruction::Roll(n) => write!(f, "roll {n}"),
             Instruction::IAdd => write!(f, "iadd"),
             Instruction::ISub => write!(f, "isub"),
             Instruction::IMul => write!(f, "imul"),
@@ -548,5 +594,193 @@ impl std::fmt::Display for Module {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{interp::VM, sema::verify::verify_module, *};
+
+    #[test]
+    fn test_stack_operations() {
+        pretty_env_logger::try_init().expect("failed to init logger");
+
+        let mut instructions = Vec::new();
+
+        // Over: [10, 20] => [10, 20, 10]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::Over,
+            Instruction::StoreLocal(2),
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(1),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(2),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Nip: [10, 20] => [20]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::Nip,
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Tuck: [10, 20] => [20, 10, 20]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::Tuck,
+            Instruction::StoreLocal(2),
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(1),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(2),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Pop: [10, 20] => [10]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::Pop,
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Dup: [10] => [10, 10]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::Dup,
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadLocal(1),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Swp: [10, 20] => [20, 10]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::Swp,
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(1),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Rot: [10, 20, 30] => [30, 10, 20]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::Rot,
+            Instruction::StoreLocal(2),
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(1),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(2),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        // Pick(1): [10, 20, 30] => [10, 20, 30, 20]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::Pick(1),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::Pop,
+            Instruction::Pop,
+            Instruction::Pop,
+        ]);
+
+        // Roll(1): [10, 20, 30] => [10, 30, 20]
+        instructions.extend([
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::Roll(1),
+            Instruction::StoreLocal(2),
+            Instruction::StoreLocal(1),
+            Instruction::StoreLocal(0),
+            Instruction::LoadLocal(0),
+            Instruction::LoadConstant(Constant::Int(10), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(1),
+            Instruction::LoadConstant(Constant::Int(30), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+            Instruction::LoadLocal(2),
+            Instruction::LoadConstant(Constant::Int(20), Type::Int32),
+            Instruction::ICmp(IntPredicate::Eq),
+            Instruction::Assert,
+        ]);
+
+        instructions.push(Instruction::Ret);
+
+        let mut module = Module::new("m1");
+
+        let function = Function::new("fn", &[], Type::Void)
+            .with_locals(&[Type::Int32; 4])
+            .add_block(BasicBlock::new(0).with_instructions(&instructions));
+
+        let func_ref = module.add_function(function);
+
+        log::debug!("{}", module);
+
+        if let Err(errors) = verify_module(&module) {
+            for error in errors {
+                log::error!("{error}");
+            }
+        }
+
+        let mut vm = VM::new(module);
+        if let Err(error) = vm.invoke(func_ref, &[]) {
+            log::error!("execution failed: {error:?}");
+        }
     }
 }

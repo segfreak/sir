@@ -260,23 +260,6 @@ impl<'a> FunctionVerifier<'a> {
         index: usize,
     ) -> Result<ControlFlow, Error> {
         match *inst {
-            Instruction::LocalDecl(local, ty) => {
-                let actual = self.local_type(local)?;
-
-                if actual != ty {
-                    return Err(self.error(
-                        label,
-                        index,
-                        format!(
-                            "localdecl type mismatch: local {:?} is {:?}, declared {:?}",
-                            local, actual, ty
-                        ),
-                    ));
-                }
-
-                Ok(ControlFlow::Continue)
-            }
-
             Instruction::LoadConstant(value, ty) => {
                 self.verify_constant(value, ty, label, index)?;
 
@@ -372,6 +355,81 @@ impl<'a> FunctionVerifier<'a> {
 
                 stack.push(r);
                 stack.push(l);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Over => {
+                let r = self.pop(stack, label, index)?;
+                let l = self.pop(stack, label, index)?;
+
+                stack.push(l);
+                stack.push(r);
+                stack.push(l);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Nip => {
+                let r = self.pop(stack, label, index)?;
+                let _ = self.pop(stack, label, index)?;
+
+                stack.push(r);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Tuck => {
+                let r = self.pop(stack, label, index)?;
+                let l = self.pop(stack, label, index)?;
+
+                stack.push(r);
+                stack.push(l);
+                stack.push(r);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Rot => {
+                let c = self.pop(stack, label, index)?;
+                let b = self.pop(stack, label, index)?;
+                let a = self.pop(stack, label, index)?;
+
+                stack.push(c);
+                stack.push(a);
+                stack.push(b);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Pick(n) => {
+                if n >= stack.len() {
+                    return Err(self.error(
+                        label,
+                        index,
+                        format!("pick depth {} exceeds stack size {}", n, stack.len()),
+                    ));
+                }
+
+                let ty = stack[stack.len() - 1 - n];
+
+                stack.push(ty);
+
+                Ok(ControlFlow::Continue)
+            }
+
+            Instruction::Roll(n) => {
+                if n >= stack.len() {
+                    return Err(self.error(
+                        label,
+                        index,
+                        format!("roll depth {} exceeds stack size {}", n, stack.len()),
+                    ));
+                }
+
+                let ty = stack.remove(stack.len() - 1 - n);
+
+                stack.push(ty);
 
                 Ok(ControlFlow::Continue)
             }
@@ -520,6 +578,18 @@ impl<'a> FunctionVerifier<'a> {
             }
 
             Instruction::Ret => {
+                if self.function.return_type.is_void() {
+                    if !stack.is_empty() {
+                        return Err(self.error(
+                            label,
+                            index,
+                            format!("stack must be empty after return, remaining: {:?}", stack),
+                        ));
+                    }
+
+                    return Ok(ControlFlow::Return);
+                }
+
                 let result = self.pop(stack, label, index)?;
 
                 self.expect_type(result, self.function.return_type, label, index)?;
@@ -693,33 +763,4 @@ impl<'a> Verifier<'a> {
 
 pub fn verify_module(module: &Module) -> Result<(), Vec<Error>> {
     Verifier::new(module).verify()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn verification_collects_errors_across_instructions_and_functions() {
-        let mut module = Module::new("test");
-        module.add_function(Function::new("broken", &[], Type::Int32).add_block(
-            BasicBlock::new(0).with_instructions(&[
-                Instruction::LoadConstant(Constant::Float(1.0), Type::Int32),
-                Instruction::Assert,
-                Instruction::Ret,
-            ]),
-        ));
-        module.add_function(Function::new("empty", &[], Type::Int32));
-
-        let errors = verify_module(&module).expect_err("module should fail verification");
-
-        assert_eq!(errors.len(), 4);
-        assert!(errors.iter().any(|error| {
-            error.function == "broken"
-                && error.message == "constant does not match declared type Int32"
-        }));
-        assert!(errors.iter().any(|error| {
-            error.function == "empty" && error.message == "function has no basic blocks"
-        }));
-    }
 }

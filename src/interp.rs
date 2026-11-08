@@ -1,6 +1,6 @@
 use crate::{
-    Constant, FloatPredicate, Function, FunctionRef, Instruction, IntPredicate, LabelRef, LocalRef,
-    Module, Type,
+    Constant, FloatPredicate, Function, FunctionRef, Instruction, InstructionRef, IntPredicate,
+    LabelRef, LocalRef, Module, Type,
 };
 use std::collections::HashMap;
 
@@ -12,7 +12,7 @@ pub enum Error {
     ArgOutOfBounds(usize),
     FunctionNotFound(FunctionRef),
     DivisionByZero,
-    AssertionFailed,
+    AssertionFailed(LabelRef, InstructionRef),
     InvalidCast,
     InvalidOperation,
     InvalidControlFlow,
@@ -202,7 +202,7 @@ impl VM {
                 if block_index + 1 >= block_count {
                     return Err(Error::InvalidControlFlow);
                 }
-                let frame = self.call_stack.last_mut().expect("frame exists");
+                let frame = self.frame_mut().expect("frame exists");
                 frame.current_block += 1;
                 frame.ip = 0;
                 continue;
@@ -211,18 +211,12 @@ impl VM {
             self.call_stack.last_mut().expect("frame exists").ip += 1;
 
             match instruction {
-                Instruction::LocalDecl(local_ref, ty) => {
-                    let expected = get_local_type(&local_types, local_ref)?;
-                    if expected != ty {
-                        return Err(Error::TypeMismatch);
-                    }
-                }
                 Instruction::LoadConstant(constant, ty) => {
                     let value = load_constant(constant, ty)?;
                     self.push(value);
                 }
                 Instruction::LoadArg(argno) => {
-                    let frame = self.call_stack.last().expect("frame exists");
+                    let frame = self.frame().expect("frame exists");
 
                     if argno >= frame.nargs {
                         return Err(Error::ArgOutOfBounds(argno));
@@ -239,8 +233,7 @@ impl VM {
                 }
                 Instruction::LoadLocal(local_ref) => {
                     let value = self
-                        .call_stack
-                        .last()
+                        .frame()
                         .and_then(|frame| frame.locals.get(&local_ref))
                         .copied()
                         .ok_or(Error::LocalNotFound(local_ref))?;
@@ -272,6 +265,58 @@ impl VM {
                     self.push(r);
                     self.push(l);
                 }
+                Instruction::Over => {
+                    let r = self.pop()?;
+                    let l = self.pop()?;
+
+                    self.push(l);
+                    self.push(r);
+                    self.push(l);
+                }
+                Instruction::Nip => {
+                    let r = self.pop()?;
+                    let _ = self.pop()?;
+
+                    self.push(r);
+                }
+                Instruction::Tuck => {
+                    let r = self.pop()?;
+                    let l = self.pop()?;
+
+                    self.push(r);
+                    self.push(l);
+                    self.push(r);
+                }
+                Instruction::Rot => {
+                    let c = self.pop()?;
+                    let b = self.pop()?;
+                    let a = self.pop()?;
+
+                    self.push(c);
+                    self.push(a);
+                    self.push(b);
+                }
+                // Копирует элемент с глубины n на вершину стека (0 — это вершина)
+                // [..., a, b, c] pick(1) => [..., a, b, c, b]
+                Instruction::Pick(n) => {
+                    let frame = self.call_stack.last_mut().expect("frame exists");
+                    if n >= frame.stack.len() {
+                        return Err(Error::StackUnderflow);
+                    }
+                    let value = frame.stack[frame.stack.len() - 1 - n];
+                    frame.stack.push(value);
+                }
+                // Переносит элемент с глубины n на вершину стека, сдвигая промежуточные
+                // [..., a, b, c] roll(1) => [..., a, c, b] (если 1 — это b)
+                Instruction::Roll(n) => {
+                    let frame = self.call_stack.last_mut().expect("frame exists");
+                    if n >= frame.stack.len() {
+                        return Err(Error::StackUnderflow);
+                    }
+                    let index = frame.stack.len() - 1 - n;
+                    let value = frame.stack.remove(index);
+                    frame.stack.push(value);
+                }
                 Instruction::Goto(label) => {
                     self.branch(&labels, label)?;
                 }
@@ -287,7 +332,10 @@ impl VM {
                 }
                 Instruction::Assert => {
                     if !self.pop()?.to_bool()? {
-                        return Err(Error::AssertionFailed);
+                        return Err(Error::AssertionFailed(
+                            block_index as LabelRef,
+                            instruction_index,
+                        ));
                     }
                 }
                 Instruction::Ret => {
@@ -391,9 +439,16 @@ impl VM {
         }
     }
 
+    fn frame(&self) -> Option<&Frame> {
+        self.call_stack.last()
+    }
+
+    fn frame_mut(&mut self) -> Option<&mut Frame> {
+        self.call_stack.last_mut()
+    }
+
     fn pop(&mut self) -> Result<Value> {
-        self.call_stack
-            .last_mut()
+        self.frame_mut()
             .ok_or(Error::StackUnderflow)?
             .stack
             .pop()
@@ -401,11 +456,7 @@ impl VM {
     }
 
     fn push(&mut self, value: Value) {
-        self.call_stack
-            .last_mut()
-            .expect("instructions execute inside a frame")
-            .stack
-            .push(value);
+        let _ = self.frame_mut().map(|f| f.stack.push(value));
     }
 
     fn branch(&mut self, labels: &[LabelRef], label: LabelRef) -> Result<()> {
@@ -413,9 +464,12 @@ impl VM {
             .iter()
             .position(|candidate| *candidate == label)
             .ok_or(Error::LabelNotFound(label))?;
-        let frame = self.call_stack.last_mut().expect("frame exists");
-        frame.current_block = block_index;
-        frame.ip = 0;
+        self.frame_mut()
+            .map(|f| {
+                f.current_block = block_index;
+                f.ip = 0;
+            })
+            .ok_or(Error::StackUnderflow)?;
         Ok(())
     }
 }
