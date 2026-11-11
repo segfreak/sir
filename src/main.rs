@@ -1,4 +1,4 @@
-use sir::interp::{Value, VM};
+use sir::interp::{VM, Value};
 use sir::sema::verify::verify_module;
 use sir::*;
 
@@ -94,17 +94,62 @@ fn main() {
             ),
     );
 
+    {
+        use Instruction::*;
+        module.add_function(
+            Function::new("min", &[Type::Int32, Type::Int32], Type::Int32)
+                .add_block(BasicBlock::new(0).with_instructions(&[
+                    LoadArg(0),
+                    LoadArg(1),
+                    ICmp(IntPredicate::Slt),
+                    GotoIfTrue(1),
+                    Goto(2),
+                ]))
+                .add_block(BasicBlock::new(1).with_instructions(&[LoadArg(0), Ret]))
+                .add_block(BasicBlock::new(2).with_instructions(&[LoadArg(1), Ret])),
+        );
+    }
+
+    {
+        use Instruction::*;
+        module.add_function(
+            Function::new("max", &[Type::Int32, Type::Int32], Type::Int32)
+                .add_block(BasicBlock::new(0).with_instructions(&[
+                    LoadArg(0),
+                    LoadArg(1),
+                    ICmp(IntPredicate::Sgt),
+                    GotoIfTrue(1),
+                    Goto(2),
+                ]))
+                .add_block(BasicBlock::new(1).with_instructions(&[LoadArg(0), Ret]))
+                .add_block(BasicBlock::new(2).with_instructions(&[LoadArg(1), Ret])),
+        );
+    }
+
+    {
+        use Instruction::*;
+        module.add_function(
+            Function::new("iseven", &[Type::Int32], Type::Bool).add_block(
+                BasicBlock::new(0).with_instructions(&[
+                    LoadArg(0),
+                    LoadConstant(Constant::Int(2), Type::Int32),
+                    IRem,
+                    LoadConstant(Constant::Int(0), Type::Int32),
+                    ICmp(IntPredicate::Eq),
+                    Ret,
+                ]),
+            ),
+        );
+    }
+
     println!("{}", module);
 
-    let add = module
-        .lookup_function("add")
-        .expect("cannot find add function");
-    let fib = module
-        .lookup_function("fib")
-        .expect("cannot find fib function");
-    let fibi = module
-        .lookup_function("fibi")
-        .expect("cannot find fibi function");
+    let add = module.lookup_function("add").unwrap();
+    let fib = module.lookup_function("fib").unwrap();
+    let fibi = module.lookup_function("fibi").unwrap();
+    let min = module.lookup_function("min").unwrap();
+    let max = module.lookup_function("max").unwrap();
+    let iseven = module.lookup_function("iseven").unwrap();
 
     match verify_module(&module) {
         Ok(()) => {
@@ -146,6 +191,29 @@ fn main() {
                 }
                 Ok(None) => println!("fib returned no value"),
                 Err(error) => println!("fib failed: {error:?}"),
+            }
+            match vm.invoke(min, &[Value::Int32(4), Value::Int32(7)]) {
+                Ok(Some(value)) => {
+                    assert_eq!(value, Value::Int32(4));
+                    println!("min(4, 7) = {value}");
+                }
+                Ok(None) => println!("min returned no value"),
+                Err(error) => println!("min failed: {error:?}"),
+            }
+            match vm.invoke(max, &[Value::Int32(4), Value::Int32(7)]) {
+                Ok(Some(value)) => {
+                    assert_eq!(value, Value::Int32(7));
+                    println!("max(4, 7) = {value}");
+                }
+                Ok(None) => println!("max returned no value"),
+                Err(error) => println!("max failed: {error:?}"),
+            }
+            match vm.invoke(iseven, &[Value::Int32(16)]) {
+                Ok(Some(value)) => {
+                    assert_eq!(value, Value::Bool(true));
+                    println!("iseven(16) = {value}");
+                }
+                _ => todo!("unexpected result for iseven(16)")
             }
         }
         Err(errors) => {

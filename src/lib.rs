@@ -308,7 +308,7 @@ impl std::fmt::Display for Instruction {
             Instruction::LoadConstant(constant, ty) => {
                 write!(f, "ldc.{} {}", ty, constant)
             }
-            Instruction::LoadArg(local) => write!(f, "ldarg %{local}"),
+            Instruction::LoadArg(local) => write!(f, "ldarg  {local}"),
             Instruction::LoadLocal(local) => write!(f, "ldloc %{local}"),
             Instruction::StoreLocal(local) => write!(f, "stloc %{local}"),
             Instruction::Assert => write!(f, "assert"),
