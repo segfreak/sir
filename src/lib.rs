@@ -535,16 +535,20 @@ impl Module {
         }
     }
 
-    pub fn next_function_ref(&mut self) -> FunctionRef {
+    pub fn function_counter(&self) -> FunctionRef {
+        self.function_counter
+    }
+
+    fn next_function(&mut self) -> FunctionRef {
         let function_ref = self.function_counter;
         self.function_counter += 1;
         function_ref
     }
 
     pub fn add_function(&mut self, function: Function) -> FunctionRef {
-        let mut function_ref = self.next_function_ref();
+        let mut function_ref = self.next_function();
         while self.has_function_ref(function_ref) {
-            function_ref = self.next_function_ref();
+            function_ref = self.next_function();
         }
         self.set_function(function_ref, function);
         function_ref

@@ -18,33 +18,37 @@ fn main() {
         ),
     );
 
-    module.set_function(
-        4,
-        Function::new("fib", &[Type::Int32], Type::Int32)
-            .add_block(BasicBlock::new(0).with_instructions(&[
-                Instruction::LoadLocal(0),
-                Instruction::LoadConstant(Constant::Int(1), Type::Int32),
-                Instruction::ICmp(IntPredicate::Sle),
-                Instruction::GotoIfTrue(1),
-                Instruction::Goto(2),
-            ]))
-            .add_block(
-                BasicBlock::new(1)
-                    .with_instructions(&[Instruction::LoadLocal(0), Instruction::Ret]),
-            )
-            .add_block(BasicBlock::new(2).with_instructions(&[
-                Instruction::LoadLocal(0),
-                Instruction::LoadConstant(Constant::Int(1), Type::Int32),
-                Instruction::ISub,
-                Instruction::Call(4),
-                Instruction::LoadLocal(0),
-                Instruction::LoadConstant(Constant::Int(2), Type::Int32),
-                Instruction::ISub,
-                Instruction::Call(4),
-                Instruction::IAdd,
-                Instruction::Ret,
-            ])),
-    );
+    {
+        let f = module.function_counter();
+
+        module.set_function(
+            f,
+            Function::new("fib", &[Type::Int32], Type::Int32)
+                .add_block(BasicBlock::new(0).with_instructions(&[
+                    Instruction::LoadLocal(0),
+                    Instruction::LoadConstant(Constant::Int(1), Type::Int32),
+                    Instruction::ICmp(IntPredicate::Sle),
+                    Instruction::GotoIfTrue(1),
+                    Instruction::Goto(2),
+                ]))
+                .add_block(
+                    BasicBlock::new(1)
+                        .with_instructions(&[Instruction::LoadLocal(0), Instruction::Ret]),
+                )
+                .add_block(BasicBlock::new(2).with_instructions(&[
+                    Instruction::LoadLocal(0),
+                    Instruction::LoadConstant(Constant::Int(1), Type::Int32),
+                    Instruction::ISub,
+                    Instruction::Call(f),
+                    Instruction::LoadLocal(0),
+                    Instruction::LoadConstant(Constant::Int(2), Type::Int32),
+                    Instruction::ISub,
+                    Instruction::Call(f),
+                    Instruction::IAdd,
+                    Instruction::Ret,
+                ])),
+        );
+    }
 
     module.add_function(
         Function::new("fibi", &[Type::Int32], Type::Int32)
@@ -213,7 +217,7 @@ fn main() {
                     assert_eq!(value, Value::Bool(true));
                     println!("iseven(16) = {value}");
                 }
-                _ => todo!("unexpected result for iseven(16)")
+                _ => todo!("unexpected result for iseven(16)"),
             }
         }
         Err(errors) => {
