@@ -1,17 +1,22 @@
+use std::path::Path;
+
+use fear::binary;
 use sir::interp::{VM, Value};
 use sir::sema::verify::verify_module;
 use sir::*;
+use fear::ssa::Module as FearModule;    
+use fear::ssa::dump::*;
 
 fn main() {
     pretty_env_logger::try_init().expect("failed to init logger");
 
-    let mut module = Module::new("algorithm");
+    let mut module = Module::new("g");
 
     module.add_function(
         Function::new("add", &[Type::Int32, Type::Int32], Type::Int32).add_block(
             BasicBlock::new(0).with_instructions(&[
-                Instruction::LoadLocal(0),
-                Instruction::LoadLocal(1),
+                Instruction::LoadArg(0),
+                Instruction::LoadArg(1),
                 Instruction::IAdd,
                 Instruction::Ret,
             ]),
@@ -25,7 +30,7 @@ fn main() {
             f,
             Function::new("fib", &[Type::Int32], Type::Int32)
                 .add_block(BasicBlock::new(0).with_instructions(&[
-                    Instruction::LoadLocal(0),
+                    Instruction::LoadArg(0),
                     Instruction::LoadConstant(Constant::Int(1), Type::Int32),
                     Instruction::ICmp(IntPredicate::Sle),
                     Instruction::GotoIfTrue(1),
@@ -33,14 +38,14 @@ fn main() {
                 ]))
                 .add_block(
                     BasicBlock::new(1)
-                        .with_instructions(&[Instruction::LoadLocal(0), Instruction::Ret]),
+                        .with_instructions(&[Instruction::LoadArg(0), Instruction::Ret]),
                 )
                 .add_block(BasicBlock::new(2).with_instructions(&[
-                    Instruction::LoadLocal(0),
+                    Instruction::LoadArg(0),
                     Instruction::LoadConstant(Constant::Int(1), Type::Int32),
                     Instruction::ISub,
                     Instruction::Call(f),
-                    Instruction::LoadLocal(0),
+                    Instruction::LoadArg(0),
                     Instruction::LoadConstant(Constant::Int(2), Type::Int32),
                     Instruction::ISub,
                     Instruction::Call(f),
@@ -54,7 +59,7 @@ fn main() {
         Function::new("fibi", &[Type::Int32], Type::Int32)
             .with_locals(&[Type::Int32, Type::Int32, Type::Int32, Type::Int32])
             .add_block(BasicBlock::new(0).with_instructions(&[
-                Instruction::LoadLocal(0),
+                Instruction::LoadArg(0),
                 Instruction::LoadConstant(Constant::Int(1), Type::Int32),
                 Instruction::ICmp(IntPredicate::Sle),
                 Instruction::GotoIfTrue(1),
@@ -68,11 +73,11 @@ fn main() {
             ]))
             .add_block(
                 BasicBlock::new(1)
-                    .with_instructions(&[Instruction::LoadLocal(0), Instruction::Ret]),
+                    .with_instructions(&[Instruction::LoadArg(0), Instruction::Ret]),
             )
             .add_block(BasicBlock::new(2).with_instructions(&[
                 Instruction::LoadLocal(3),
-                Instruction::LoadLocal(0),
+                Instruction::LoadArg(0),
                 Instruction::ICmp(IntPredicate::Sle),
                 Instruction::GotoIfFalse(4),
                 Instruction::Goto(3),
@@ -158,7 +163,7 @@ fn main() {
     match verify_module(&module) {
         Ok(()) => {
             println!("verification succeeded");
-            let mut vm = VM::new(module);
+            let mut vm = VM::new(module.clone());
             match vm.invoke(add, &[Value::Int32(20), Value::Int32(22)]) {
                 Ok(Some(value)) => println!("add(20, 22) = {value}"),
                 Ok(None) => println!("add returned no value"),
@@ -228,4 +233,11 @@ fn main() {
             }
         }
     }
+
+    let mut fm = module.to_fear();    
+    fm.optimize(fear::types::OptLevel::Full, true);
+    println!("fear module:\n{}", fm.dump());
+
+    binary::write_to_file(&fm, Path::new("g.bin")).expect("failed to write fear module to file");
+    println!("wrote fear module to g.bin");
 }

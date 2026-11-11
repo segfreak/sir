@@ -5,6 +5,7 @@ use crate::traits::ToStaticStr;
 pub mod interp;
 pub mod sema;
 pub mod traits;
+pub mod codegen;
 
 pub type LocalRef = u32;
 
@@ -437,7 +438,7 @@ impl Function {
             if index > 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "%{index}: {ty}")?;
+            write!(f, "%{}: {ty}", index + self.params.len())?;
         }
         writeln!(f, "]")?;
 
