@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <limits.h>
 
+/* defined in `fib.sir` */
 int32_t fib(int32_t);
 
 static void showhelp(const char *execname) {
