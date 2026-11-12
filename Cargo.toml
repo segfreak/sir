@@ -7,14 +7,9 @@ version = "0.0.0"
 edition = "2024"
 license = "MIT"
 
-[workspace.features]
-default = ["cranelift"]
-cranelift = ["sir_codegen_fear/cranelift"]
-
 [workspace.dependencies]
 sir = { path = "crates/sir" }
 sir_codegen_fear = { path = "crates/sir_codegen_fear" }
-sir_interp = { path = "crates/sir_interp" }
 sir_reader = { path = "crates/sir_reader" }
 
 serde = { version = "1.0.229", features = ["derive"] }

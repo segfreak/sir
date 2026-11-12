@@ -737,7 +737,6 @@ name = "sir_reader"
 version = "0.0.0"
 dependencies = [
  "log",
- "pretty_env_logger",
  "sir",
  "thiserror",
 ]
