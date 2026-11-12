@@ -5,51 +5,7 @@ use fear::types::{
     CallingConvention, CastKind, FloatCmp, FunctionSignature, IntCmp, Linkage, Type as FearType,
 };
 
-use crate::*;
-
-pub struct Codegen;
-
-impl Codegen {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn lower_module(&self, module: &Module) -> FearModule {
-        lower_module(module)
-    }
-}
-
-impl Default for Codegen {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl From<&Module> for FearModule {
-    fn from(module: &Module) -> Self {
-        lower_module(module)
-    }
-}
-
-impl From<Module> for FearModule {
-    fn from(module: Module) -> Self {
-        lower_module(&module)
-    }
-}
-
-impl Module {
-    pub fn to_fear(&self) -> FearModule {
-        lower_module(self)
-    }
-}
-
-pub fn codegen(module: &Module) -> FearModule {
-    lower_module(module)
-}
-
-pub fn lower(module: &Module) -> FearModule {
-    lower_module(module)
-}
+use sir::*;
 
 pub fn lower_module(module: &Module) -> FearModule {
     let mut fear_module = FearModule::new(module.name.clone());
@@ -103,7 +59,11 @@ fn lower_function_def(
     let mut def = FunctionDef::new();
     let entry_id = def.get_entry();
     let entry_point = BlockPoint::new(
-        function.blocks.first().map(|block| block.label).unwrap_or(0),
+        function
+            .blocks
+            .first()
+            .map(|block| block.label)
+            .unwrap_or(0),
         0,
     );
 
@@ -227,6 +187,7 @@ fn lower_block(
             }
             Instruction::Assert => {
                 let _ = stack.pop().expect("stack underflow while asserting");
+                log::warn!("ignoring assert instruction");
             }
             Instruction::Goto(target) => {
                 let target_point = BlockPoint::new(target, 0);
@@ -467,7 +428,7 @@ fn lower_block(
     // A basic block that ends without an explicit terminator falls through
     // to the next source block. Emit an actual CFG edge; merely lowering the
     // next block would leave it disconnected in FEAR.
-    if !terminated && let Some(next_label) = next_block_label(function, point.label){
+    if !terminated && let Some(next_label) = next_block_label(function, point.label) {
         let next_point = BlockPoint::new(next_label, 0);
         let next_id = prepare_point(def, block_map, next_point, &stack, entry_stack);
         def.make_jump(block_id, next_id, stack);
@@ -554,8 +515,12 @@ fn lower_binary_int(
     stack: &mut Vec<fear::ssa::ValueId>,
     instruction: Instruction,
 ) {
-    let rhs = stack.pop().expect("stack underflow while lowering int binary op");
-    let lhs = stack.pop().expect("stack underflow while lowering int binary op");
+    let rhs = stack
+        .pop()
+        .expect("stack underflow while lowering int binary op");
+    let lhs = stack
+        .pop()
+        .expect("stack underflow while lowering int binary op");
     let ty = def.get_type_of(lhs);
     let value = match instruction {
         Instruction::IAdd => def.make_int_add(block_id, ty, lhs, rhs),
@@ -582,7 +547,9 @@ fn lower_unary_int(
     stack: &mut Vec<fear::ssa::ValueId>,
     instruction: Instruction,
 ) {
-    let value = stack.pop().expect("stack underflow while lowering int unary op");
+    let value = stack
+        .pop()
+        .expect("stack underflow while lowering int unary op");
     let ty = def.get_type_of(value);
     let lowered = match instruction {
         Instruction::IAbs => {
@@ -605,8 +572,12 @@ fn lower_binary_float(
     stack: &mut Vec<fear::ssa::ValueId>,
     instruction: Instruction,
 ) {
-    let rhs = stack.pop().expect("stack underflow while lowering float binary op");
-    let lhs = stack.pop().expect("stack underflow while lowering float binary op");
+    let rhs = stack
+        .pop()
+        .expect("stack underflow while lowering float binary op");
+    let lhs = stack
+        .pop()
+        .expect("stack underflow while lowering float binary op");
     let ty = def.get_type_of(lhs);
     let value = match instruction {
         Instruction::FAdd => def.make_float_add(block_id, ty, lhs, rhs),
@@ -625,7 +596,9 @@ fn lower_unary_float(
     stack: &mut Vec<fear::ssa::ValueId>,
     instruction: Instruction,
 ) {
-    let value = stack.pop().expect("stack underflow while lowering float unary op");
+    let value = stack
+        .pop()
+        .expect("stack underflow while lowering float unary op");
     let ty = def.get_type_of(value);
     let lowered = match instruction {
         Instruction::FAbs => {
@@ -686,15 +659,23 @@ fn map_float_cmp(predicate: FloatPredicate) -> FloatCmp {
 
 fn map_cast_kind(source: FearType, target: FearType) -> CastKind {
     match (source, target) {
-        (FearType::Int1, FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64) => CastKind::Zext,
+        (FearType::Int1, FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64) => {
+            CastKind::Zext
+        }
         (FearType::Int8, FearType::Int16 | FearType::Int32 | FearType::Int64) => CastKind::Sext,
         (FearType::Int16, FearType::Int32 | FearType::Int64) => CastKind::Sext,
         (FearType::Int32, FearType::Int64) => CastKind::Sext,
         (FearType::Int16, FearType::Int8) => CastKind::Trunc,
         (FearType::Int32, FearType::Int8 | FearType::Int16) => CastKind::Trunc,
         (FearType::Int64, FearType::Int8 | FearType::Int16 | FearType::Int32) => CastKind::Trunc,
-        (FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64, FearType::Float32 | FearType::Float64) => CastKind::SIToFP,
-        (FearType::Float32 | FearType::Float64, FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64) => CastKind::FPToSI,
+        (
+            FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64,
+            FearType::Float32 | FearType::Float64,
+        ) => CastKind::SIToFP,
+        (
+            FearType::Float32 | FearType::Float64,
+            FearType::Int8 | FearType::Int16 | FearType::Int32 | FearType::Int64,
+        ) => CastKind::FPToSI,
         (FearType::Float32, FearType::Float64) => CastKind::FPromote,
         (FearType::Float64, FearType::Float32) => CastKind::FTrunc,
         (_, _) => CastKind::Bitcast,
@@ -721,10 +702,12 @@ fn local_type(function: &Function, local: LocalRef) -> Type {
 }
 
 fn next_block_label(function: &Function, label: LabelRef) -> Option<LabelRef> {
-    let index = function.blocks.iter().position(|block| block.label == label)?;
+    let index = function
+        .blocks
+        .iter()
+        .position(|block| block.label == label)?;
     function.blocks.get(index + 1).map(|block| block.label)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -745,7 +728,9 @@ mod tests {
         );
 
         let fear_module = lower_module(&module);
-        let fear_func = fear_module.lookup_function("add").expect("missing add function");
+        let fear_func = fear_module
+            .lookup_function("add")
+            .expect("missing add function");
         let fear_def = fear_module
             .get_function(fear_func)
             .and_then(|f| f.get_definition())
@@ -753,7 +738,6 @@ mod tests {
 
         assert!(!fear_def.get_blocks().is_empty());
     }
-
 
     #[test]
     fn splits_conditional_fallthrough_inside_source_block() {
@@ -775,7 +759,9 @@ mod tests {
         );
 
         let fear_module = lower_module(&module);
-        let fear_func = fear_module.lookup_function("branch").expect("missing branch");
+        let fear_func = fear_module
+            .lookup_function("branch")
+            .expect("missing branch");
         let fear_def = fear_module
             .get_function(fear_func)
             .and_then(|f| f.get_definition())
@@ -797,9 +783,7 @@ mod tests {
                     Instruction::GotoIfTrue(2),
                     Instruction::Goto(1),
                 ]))
-                .add_block(BasicBlock::new(1).with_instructions(&[
-                    Instruction::Goto(0),
-                ]))
+                .add_block(BasicBlock::new(1).with_instructions(&[Instruction::Goto(0)]))
                 .add_block(BasicBlock::new(2).with_instructions(&[
                     Instruction::LoadConstant(Constant::Int(1), Type::Int32),
                     Instruction::Ret,

@@ -1,14 +1,13 @@
-[package]
-name = "sir"
-version = "0.1.0"
+[workspace]
+resolver = "3"
+members = ["crates/sir", "crates/sir_codegen_fear", "crates/sir_interp", "crates/sir_reader"]
+
+[workspace.package]
+version = "0.0.0"
 edition = "2024"
+license = "MIT"
 
-[features]
-default = ["fear/binary-ir", "cranelift"]
-cranelift = ["fear/cranelift"]
-
-[dependencies]
+[workspace.dependencies]
+sir = { path = "crates/sir" }
+serde = { version = "1.0.229", features = ["derive"] }
 log = "0.4.35"
-pretty_env_logger = "0.5.0"
-fear = { git = "https://github.com/segfreak/fear.git", branch = "dev" }
-target-lexicon = "0.13.5"

@@ -1,0 +1,15 @@
+[package]
+name = "sir_codegen_fear"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+cranelift = ["fear/cranelift"]
+
+[dependencies]
+sir = { workspace = true }
+log = { workspace = true }
+fear = { git = "https://github.com/segfreak/fear.git", branch = "dev", features = ["serde"] }
+target-lexicon = "0.13.5"

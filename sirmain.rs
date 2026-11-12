@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 
-use sir::interp::{Value, VM};
+use sir::interp::{VM, Value};
 use sir::sema::verify::verify_module;
 use sir::*;
 use target_lexicon::Triple;

@@ -1,7 +1,8 @@
-use crate::sema::TypeStack;
 use crate::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+
+type TypeStack = Vec<Type>;
 
 #[derive(Debug, Clone)]
 
@@ -763,4 +764,10 @@ impl<'a> Verifier<'a> {
 
 pub fn verify_module(module: &Module) -> Result<(), Vec<Error>> {
     Verifier::new(module).verify()
+}
+
+impl Module {
+    pub fn verify(&self) -> Result<(), Vec<Error>> {
+        Verifier::new(self).verify()
+    }
 }

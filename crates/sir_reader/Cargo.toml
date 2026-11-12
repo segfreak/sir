@@ -1,0 +1,8 @@
+[package]
+name = "sir_reader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sir = { workspace = true }

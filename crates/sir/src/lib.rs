@@ -1,11 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 use crate::traits::ToStaticStr;
 
-pub mod codegen;
-pub mod interp;
-pub mod sema;
 pub mod traits;
+pub mod verify;
 
 pub type LocalRef = u32;
 
@@ -17,11 +15,20 @@ pub type ArgRef = usize;
 
 pub type InstructionRef = usize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 
 pub enum Constant {
     Int(i64),
     Float(f64),
+}
+
+impl Hash for Constant {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Int(i) => i.hash(state),
+            Self::Float(f) => f.to_bits().hash(state),
+        }
+    }
 }
 
 impl std::fmt::Display for Constant {
@@ -43,7 +50,7 @@ impl std::fmt::Display for Constant {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 
 pub enum Type {
     Void,
@@ -139,8 +146,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum IntPredicate {
     Eq,
     Ne,
@@ -154,8 +160,7 @@ pub enum IntPredicate {
     Uge,
 }
 
-#[derive(Debug, Clone, Copy)]
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum FloatPredicate {
     Eq,
     Ne,
@@ -215,7 +220,7 @@ impl std::fmt::Display for FloatPredicate {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Instruction {
     // Копирует второй элемент стека на вершину
     // [a, b] => [a, b, a]
@@ -363,7 +368,7 @@ impl std::fmt::Display for Instruction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct BasicBlock {
     pub label: LabelRef,
     pub instructions: Vec<Instruction>,
@@ -401,7 +406,7 @@ impl BasicBlock {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct Function {
     pub name: String,
     pub params: Vec<Type>,
@@ -458,7 +463,7 @@ impl std::fmt::Display for Function {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, serde::Serialize)]
 pub struct FunctionViewWithRef<'a> {
     funcref: FunctionRef,
     func: &'a Function,
@@ -519,7 +524,7 @@ impl Function {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct Module {
     pub name: String,
     pub functions: HashMap<FunctionRef, Function>,
@@ -604,7 +609,7 @@ impl std::fmt::Display for Module {
 
 #[cfg(test)]
 mod tests {
-    use crate::{interp::VM, sema::verify::verify_module, *};
+    use crate::*;
 
     #[test]
     fn test_stack_operations() {
@@ -769,23 +774,18 @@ mod tests {
 
         let mut module = Module::new("m1");
 
-        let function = Function::new("fn", &[], Type::Void)
-            .with_locals(&[Type::Int32; 4])
-            .add_block(BasicBlock::new(0).with_instructions(&instructions));
-
-        let func_ref = module.add_function(function);
+        module.add_function(
+            Function::new("fn", &[], Type::Void)
+                .with_locals(&[Type::Int32; 4])
+                .add_block(BasicBlock::new(0).with_instructions(&instructions)),
+        );
 
         log::debug!("{}", module);
 
-        if let Err(errors) = verify_module(&module) {
+        if let Err(errors) = module.verify() {
             for error in errors {
                 log::error!("{error}");
             }
-        }
-
-        let mut vm = VM::new(module);
-        if let Err(error) = vm.invoke(func_ref, &[]) {
-            log::error!("execution failed: {error:?}");
         }
     }
 }
