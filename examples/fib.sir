@@ -1,0 +1,29 @@
+function fib(n: i32): i32 {
+    locals [a: i32, b: i32, i: i32, tmp: i32]
+L0: ldc     i32 0
+    stloc       %a
+    ldc     i32 1
+    stloc       %b
+    ldc     i32 0
+    stloc       %i
+    br          L1
+L1: ldloc       %i
+    ldarg       #n
+    slt
+    brfalse     L2
+    ldloc       %b
+    stloc       %tmp
+    ldloc       %a
+    ldloc       %b
+    iadd
+    stloc       %b
+    ldloc       %tmp
+    stloc       %a
+    ldloc       %i
+    ldc     i32 1
+    iadd
+    stloc       %i
+    br          L1
+L2: ldloc       %a
+    ret
+}
