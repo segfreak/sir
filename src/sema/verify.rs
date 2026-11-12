@@ -465,7 +465,7 @@ impl<'a> FunctionVerifier<'a> {
                 Ok(ControlFlow::Continue)
             }
 
-            Instruction::IAbs | Instruction::ISqrt | Instruction::INeg | Instruction::INot => {
+            Instruction::IAbs | Instruction::INeg | Instruction::INot /* | Instruction::ISqrt */  => {
                 let ty = self.pop(stack, label, index)?;
 
                 if !ty.is_integer() {
@@ -526,7 +526,7 @@ impl<'a> FunctionVerifier<'a> {
                 Ok(ControlFlow::Continue)
             }
 
-            Instruction::FAbs | Instruction::FSqrt | Instruction::FNeg => {
+            Instruction::FAbs  | Instruction::FNeg  /* | Instruction::FSqrt */ => {
                 let ty = self.pop(stack, label, index)?;
 
                 if !ty.is_float() {

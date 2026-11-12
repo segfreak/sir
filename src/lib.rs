@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use crate::traits::ToStaticStr;
 
+pub mod codegen;
 pub mod interp;
 pub mod sema;
 pub mod traits;
-pub mod codegen;
 
 pub type LocalRef = u32;
 
@@ -280,7 +280,7 @@ pub enum Instruction {
     IRem,
     URem,
     IAbs,
-    ISqrt,
+    // ISqrt,
     INeg,
     ICmp(IntPredicate),
     FAdd,
@@ -289,7 +289,7 @@ pub enum Instruction {
     FDiv,
     FRem,
     FAbs,
-    FSqrt,
+    // FSqrt,
     FNeg,
     FCmp(FloatPredicate),
     Cast(Type),
@@ -335,7 +335,7 @@ impl std::fmt::Display for Instruction {
             Instruction::IRem => write!(f, "irem"),
             Instruction::URem => write!(f, "urem"),
             Instruction::IAbs => write!(f, "iabs"),
-            Instruction::ISqrt => write!(f, "isqrt"),
+            // Instruction::ISqrt => write!(f, "isqrt"),
             Instruction::INeg => write!(f, "ineg"),
             Instruction::IAnd => write!(f, "iand"),
             Instruction::IOr => write!(f, "ior"),
@@ -353,7 +353,7 @@ impl std::fmt::Display for Instruction {
             Instruction::FDiv => write!(f, "fdiv"),
             Instruction::FRem => write!(f, "frem"),
             Instruction::FAbs => write!(f, "fabs"),
-            Instruction::FSqrt => write!(f, "fsqrt"),
+            // Instruction::FSqrt => write!(f, "fsqrt"),
             Instruction::FNeg => write!(f, "fneg"),
             Instruction::FCmp(predicate) => {
                 write!(f, "f{}", predicate)

@@ -404,7 +404,7 @@ impl VM {
                     let left = self.pop()?;
                     self.push(integer_binary(instruction, left, right)?);
                 }
-                Instruction::IAbs | Instruction::ISqrt | Instruction::INeg | Instruction::INot => {
+                Instruction::IAbs | Instruction::INeg | Instruction::INot /* | Instruction::ISqrt  */ => {
                     let value = self.pop()?;
                     self.push(integer_unary(instruction, value)?);
                 }
@@ -422,7 +422,7 @@ impl VM {
                     let left = self.pop()?;
                     self.push(float_binary(instruction, left, right)?);
                 }
-                Instruction::FAbs | Instruction::FSqrt | Instruction::FNeg => {
+                Instruction::FAbs | Instruction::FNeg /* | Instruction::FSqrt  */ => {
                     let value = self.pop()?;
                     self.push(float_unary(instruction, value)?);
                 }
@@ -609,24 +609,24 @@ fn integer_unary(instruction: Instruction, value: Value) -> Result<Value> {
             let value = integer_value(value)?;
             from_integer_bits(ty, value.wrapping_neg() as u64)
         }
-        Instruction::ISqrt => {
-            let value = integer_value(value)?;
-            if value < 0 {
-                return Err(Error::InvalidOperation);
-            }
-            let value = value as u64;
-            let mut low = 0u64;
-            let mut high = (1u64 << width.div_ceil(2)).min(value.saturating_add(1));
-            while low < high {
-                let mid = low + (high - low).div_ceil(2);
-                if mid <= value / mid.max(1) {
-                    low = mid;
-                } else {
-                    high = mid - 1;
-                }
-            }
-            from_integer_bits(ty, low)
-        }
+        // Instruction::ISqrt => {
+        //     let value = integer_value(value)?;
+        //     if value < 0 {
+        //         return Err(Error::InvalidOperation);
+        //     }
+        //     let value = value as u64;
+        //     let mut low = 0u64;
+        //     let mut high = (1u64 << width.div_ceil(2)).min(value.saturating_add(1));
+        //     while low < high {
+        //         let mid = low + (high - low).div_ceil(2);
+        //         if mid <= value / mid.max(1) {
+        //             low = mid;
+        //         } else {
+        //             high = mid - 1;
+        //         }
+        //     }
+        //     from_integer_bits(ty, low)
+        // }
         Instruction::INot => {
             let bits = !bits & width_mask(width);
             from_integer_bits(ty, bits)
@@ -700,14 +700,14 @@ fn apply_f64(instruction: Instruction, left: f64, right: f64) -> Result<f64> {
 fn float_unary(instruction: Instruction, value: Value) -> Result<Value> {
     match (instruction, value) {
         (Instruction::FAbs, Value::Float32(v)) => Ok(Value::Float32(v & 0x7fff_ffff)),
-        (Instruction::FSqrt, Value::Float32(v)) => {
-            Ok(Value::Float32(f32::from_bits(v).sqrt().to_bits()))
-        }
+        // (Instruction::FSqrt, Value::Float32(v)) => {
+        //     Ok(Value::Float32(f32::from_bits(v).sqrt().to_bits()))
+        // }
         (Instruction::FNeg, Value::Float32(v)) => Ok(Value::Float32(v ^ 0x8000_0000)),
         (Instruction::FAbs, Value::Float64(v)) => Ok(Value::Float64(v & 0x7fff_ffff_ffff_ffff)),
-        (Instruction::FSqrt, Value::Float64(v)) => {
-            Ok(Value::Float64(f64::from_bits(v).sqrt().to_bits()))
-        }
+        // (Instruction::FSqrt, Value::Float64(v)) => {
+        //     Ok(Value::Float64(f64::from_bits(v).sqrt().to_bits()))
+        // }
         (Instruction::FNeg, Value::Float64(v)) => Ok(Value::Float64(v ^ 0x8000_0000_0000_0000)),
         _ => Err(Error::TypeMismatch),
     }

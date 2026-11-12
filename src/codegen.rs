@@ -414,7 +414,7 @@ fn lower_block(
             | Instruction::ISar => {
                 lower_binary_int(def, block_id, &mut stack, *instruction);
             }
-            Instruction::IAbs | Instruction::ISqrt | Instruction::INeg | Instruction::INot => {
+            Instruction::IAbs  | Instruction::INeg | Instruction::INot /* | Instruction::ISqrt  */ => {
                 lower_unary_int(def, block_id, &mut stack, *instruction);
             }
             Instruction::ICmp(predicate) => {
@@ -430,7 +430,7 @@ fn lower_block(
             | Instruction::FRem => {
                 lower_binary_float(def, block_id, &mut stack, *instruction);
             }
-            Instruction::FAbs | Instruction::FSqrt | Instruction::FNeg => {
+            Instruction::FAbs | Instruction::FNeg /* | Instruction::FSqrt */  => {
                 lower_unary_float(def, block_id, &mut stack, *instruction);
             }
             Instruction::FCmp(predicate) => {
@@ -591,7 +591,7 @@ fn lower_unary_int(
             let cond = def.make_int_cmp(block_id, IntCmp::Lt, value, zero);
             def.make_select(block_id, ty, cond, negated, value)
         }
-        Instruction::ISqrt => unimplemented!("SIR integer sqrt is not representable in FEAR SSA"),
+        // Instruction::ISqrt => unimplemented!("SIR integer sqrt is not representable in FEAR SSA"),
         Instruction::INeg => def.make_int_neg(block_id, ty, value),
         Instruction::INot => def.make_bitnot(block_id, ty, value),
         _ => unreachable!(),
@@ -634,7 +634,7 @@ fn lower_unary_float(
             let cond = def.make_float_cmp(block_id, FloatCmp::OLt, value, zero);
             def.make_select(block_id, ty, cond, negated, value)
         }
-        Instruction::FSqrt => unimplemented!("SIR float sqrt is not representable in FEAR SSA"),
+        // Instruction::FSqrt => unimplemented!("SIR float sqrt is not representable in FEAR SSA"),
         Instruction::FNeg => def.make_float_neg(block_id, ty, value),
         _ => unreachable!(),
     };
