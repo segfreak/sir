@@ -1,0 +1,20 @@
+
+Function declaration support for multiple modules that compiled together.
+
+module a
+    function foo(): i32 {
+        ldc i32 42
+        ret
+    }
+end
+
+module b
+    function foo(): i32;
+
+    function bar(): i32 {
+        call foo
+        ldc i32 1
+        iadd
+        ret
+    }
+end
