@@ -1,0 +1,11 @@
+function first(x: i32, y: i32): i32 {
+entry:
+	ldarg #0
+	ret
+}
+
+function second(x: i32, y: i32): i32 {
+entry:
+	ldarg #1
+	ret
+}

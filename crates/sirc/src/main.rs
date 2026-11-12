@@ -78,7 +78,8 @@ fn main() -> anyhow::Result<()> {
         .parse_module(module_name)
         .map_err(|e| anyhow::anyhow!("parsing failed: {e}"))?;
 
-    let fear_module = sir_codegen_fear::lower_module(&module);
+    let mut fear_module = sir_codegen_fear::lower_module(&module);
+    fear_module.optimize(opt_level, true);
 
     let file = File::create(&output)?;
     let writer = BufWriter::new(file);
