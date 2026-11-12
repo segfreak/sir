@@ -10,4 +10,3 @@ default = []
 [dependencies]
 log = { workspace = true }
 serde = { workspace = true }
-pretty_env_logger = "0.5.0"

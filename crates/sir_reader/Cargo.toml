@@ -6,3 +6,6 @@ license.workspace = true
 
 [dependencies]
 sir = { workspace = true }
+log = { workspace = true }
+pretty_env_logger = { workspace = true }
+thiserror = { workspace = true }

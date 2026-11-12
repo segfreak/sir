@@ -1,0 +1,105 @@
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Token {
+    Function,
+
+    I1,
+    I8,
+    I16,
+    I32,
+    I64,
+    F32,
+    F64,
+
+    IntLiteral(i64),
+    FloatLiteral(String),
+    Ident(String),
+
+    ArgRef(Box<Token>),
+    LocalRef(Box<Token>),
+
+    LBrace,
+    RBrace,
+    LParen,
+    RParen,
+    LBracket,
+    RBracket,
+    Colon,
+    Comma,
+
+    Locals,
+
+    Ldarg,
+    Ldc,
+    Ldloc,
+    Stloc,
+
+    Iadd,
+    Isub,
+    Imul,
+    Idiv,
+    Udiv,
+    Irem,
+    Urem,
+    IAbs,
+    INeg,
+
+    IAnd,
+    IOr,
+    IXor,
+    INot,
+    IShl,
+    IShr,
+    ISar,
+
+    Ieq,
+    Ine,
+    Islt,
+    Isle,
+    Isgt,
+    Isge,
+
+    Iult,
+    Iule,
+    Iugt,
+    Iuge,
+
+    Fadd,
+    Fsub,
+    Fmul,
+    Fdiv,
+    Frem,
+    FAbs,
+    FNeg,
+
+    Feq,
+    Fne,
+    Folt,
+    Fole,
+    Fogt,
+    Foge,
+
+    Fult,
+    Fule,
+    Fugt,
+    Fuge,
+
+    Cast,
+    Assert,
+
+    Ret,
+    Br,
+    Brtrue,
+    Brfalse,
+
+    Call,
+
+    Pop,
+    Dup,
+    Swp,
+    Over,
+    Nip,
+    Tuck,
+    Rot,
+    Pick,
+    Roll,
+}

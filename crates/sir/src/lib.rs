@@ -50,7 +50,9 @@ impl std::fmt::Display for Constant {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 
 pub enum Type {
     Void,
@@ -146,7 +148,9 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum IntPredicate {
     Eq,
     Ne,
@@ -160,7 +164,9 @@ pub enum IntPredicate {
     Uge,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub enum FloatPredicate {
     Eq,
     Ne,
@@ -513,6 +519,14 @@ impl Function {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.blocks.is_empty() && self.locals.is_empty()
+    }
+
+    pub fn is_definition(&self) -> bool {
+        !self.is_empty()
+    }
+
     pub fn add_block(mut self, block: BasicBlock) -> Self {
         self.blocks.push(block);
         self
@@ -613,8 +627,6 @@ mod tests {
 
     #[test]
     fn test_stack_operations() {
-        pretty_env_logger::try_init().expect("failed to init logger");
-
         let mut instructions = Vec::new();
 
         // Over: [10, 20] => [10, 20, 10]

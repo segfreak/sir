@@ -1,29 +1,29 @@
-function foo(i32): i32 {
+function foo(x: i32): i32 {
 entry:
-    ldarg   #0
-    ldc     i32 0xFFFF
+    ldarg #x
+    ldc i32 0xFFFF
     iadd
     ret
 }
 
-function fib(i32): i32 {
+function fib(x: i32): i32 {
 entry:
-    ldarg   #0
-    ldc     i32 2
-    isgt
-    brtrue  L1
-    ldarg   #0
+    ldarg #x
+    ldc i32 2
+    sgt
+    brtrue L1
+    ldarg #0
     ret
 
 L1:
-    ldarg   #0
-    ldc     i32 1
+    ldarg #x
+    ldc i32 1
     isub
-    call    fib
-    ldarg   #0
-    ldc     i32 2
+    call fib
+    ldarg #x
+    ldc i32 2
     isub
-    call    fib
+    call fib
     iadd
     ret
 }

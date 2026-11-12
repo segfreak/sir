@@ -711,7 +711,6 @@ name = "sir"
 version = "0.0.0"
 dependencies = [
  "log",
- "pretty_env_logger",
  "serde",
 ]
 
@@ -737,7 +736,25 @@ dependencies = [
 name = "sir_reader"
 version = "0.0.0"
 dependencies = [
+ "log",
+ "pretty_env_logger",
  "sir",
+ "thiserror",
+]
+
+[[package]]
+name = "sirc"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "fear",
+ "log",
+ "pretty_env_logger",
+ "sir",
+ "sir_codegen_fear",
+ "sir_reader",
+ "target-lexicon",
 ]
 
 [[package]]
