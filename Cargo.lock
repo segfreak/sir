@@ -713,6 +713,7 @@ dependencies = [
  "fear",
  "log",
  "pretty_env_logger",
+ "target-lexicon",
 ]
 
 [[package]]

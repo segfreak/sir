@@ -467,13 +467,11 @@ fn lower_block(
     // A basic block that ends without an explicit terminator falls through
     // to the next source block. Emit an actual CFG edge; merely lowering the
     // next block would leave it disconnected in FEAR.
-    if !terminated {
-        if let Some(next_label) = next_block_label(function, point.label) {
-            let next_point = BlockPoint::new(next_label, 0);
-            let next_id = prepare_point(def, block_map, next_point, &stack, entry_stack);
-            def.make_jump(block_id, next_id, stack);
-            pending.push_back(next_point);
-        }
+    if !terminated && let Some(next_label) = next_block_label(function, point.label){
+        let next_point = BlockPoint::new(next_label, 0);
+        let next_id = prepare_point(def, block_map, next_point, &stack, entry_stack);
+        def.make_jump(block_id, next_id, stack);
+        pending.push_back(next_point);
     }
 }
 
@@ -726,7 +724,6 @@ fn next_block_label(function: &Function, label: LabelRef) -> Option<LabelRef> {
     let index = function.blocks.iter().position(|block| block.label == label)?;
     function.blocks.get(index + 1).map(|block| block.label)
 }
-
 
 
 #[cfg(test)]

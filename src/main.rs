@@ -1,11 +1,11 @@
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::Path;
 
-use fear::binary;
-use sir::interp::{VM, Value};
+use sir::interp::{Value, VM};
 use sir::sema::verify::verify_module;
 use sir::*;
-use fear::ssa::Module as FearModule;    
-use fear::ssa::dump::*;
+use target_lexicon::Triple;
 
 fn main() {
     pretty_env_logger::try_init().expect("failed to init logger");
@@ -72,8 +72,7 @@ fn main() {
                 Instruction::Goto(2),
             ]))
             .add_block(
-                BasicBlock::new(1)
-                    .with_instructions(&[Instruction::LoadArg(0), Instruction::Ret]),
+                BasicBlock::new(1).with_instructions(&[Instruction::LoadArg(0), Instruction::Ret]),
             )
             .add_block(BasicBlock::new(2).with_instructions(&[
                 Instruction::LoadLocal(3),
@@ -234,10 +233,51 @@ fn main() {
         }
     }
 
-    let mut fm = module.to_fear();    
-    fm.optimize(fear::types::OptLevel::Full, true);
-    println!("fear module:\n{}", fm.dump());
+    println!();
+    println!();
 
-    binary::write_to_file(&fm, Path::new("g.bin")).expect("failed to write fear module to file");
+    let mut fm = module.to_fear();
+
+    if fm.verify().is_err() {
+        println!("fear verification failed");
+        println!("  note: fix your sir/codegen.rs stupid hotdih");
+    }
+
+    println!("{}", fm.dump());
+    fear::binary::write_to_file(&fm, Path::new("g.preopt.bin"))
+        .expect("failed to write fear module to file");
+    println!("wrote fear module to g.preopt.bin");
+
+    println!();
+    println!();
+
+    fm.optimize(fear::types::OptLevel::Full, true);
+
+    if fm.verify().is_err() {
+        println!("fear postopt verification failed");
+        println!("  note: launch debugger motherfucker");
+    }
+
+    println!("{}", fm.dump());
+
+    fear::binary::write_to_file(&fm, Path::new("g.bin"))
+        .expect("failed to write fear module to file");
     println!("wrote fear module to g.bin");
+
+    {
+        let file = File::create("g.o").expect("cannot open g.object file");
+        let writer = BufWriter::new(file);
+        fear::compiler::compile_module(
+            &fm,
+            &fear::compiler::CompilerConfig::setup(
+                fear::compiler::OutputType::Object,
+                Triple::host(),
+                fear::types::OptLevel::None,
+                true,
+                None,
+            ),
+            writer,
+        )
+        .expect("cannot compile module");
+    }
 }
