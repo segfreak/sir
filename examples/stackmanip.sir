@@ -1,0 +1,17 @@
+function first_argument(x: i32, y: i32): i32 {
+entry:
+	ldarg #x // [x]
+	ldarg #y // [x, y]
+	roll 1   // [y, x]
+	nip		 // [x]
+	ret
+}
+
+function second_argument(x: i32, y: i32): i32 {
+entry:
+	ldarg #x // [x]
+	ldarg #y // [x, y]
+	swp      // [y, x]
+	pop		 // [y]
+	ret
+}
